@@ -1,4 +1,3 @@
-#################################
 # 	   HAMK-IoT		#
 #      Smart Systems intensive course at HAMK	#
 
