@@ -1,7 +1,6 @@
 #################################
 # 	   HAMK-IoT		#
-#      Smart Systems IoT	#
-#   intensive course at HAMK	#
+#      Smart Systems intensive course at HAMK	#
 
 # Smart systems idea
 	Automatic light control with temperature and humidity monitoring
