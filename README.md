@@ -3,17 +3,13 @@
 #      Smart Systems IoT	#
 #   intensive course at HAMK	#
 
-######################
 # Smart systems idea
--
-Automatic light control with temperature and humidity monitoring
---
+	Automatic light control with temperature and humidity monitoring
 
-#########################
 #			#
 #	PARTS		#
 #			#
-#########################
+
 	-Arduino MKR1000
 	-Temp. sensor
 	-Microphone
@@ -22,11 +18,8 @@ Automatic light control with temperature and humidity monitoring
 	-E27 light plug
 	-E27 light bulb
 
-#########################
 #			#
 #	SENSORS		#
 #			#
-#########################
-
 	# Temp sensor
 		Temp sensor sends temperature data through SPI with 12-14bit frames
