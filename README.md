@@ -21,4 +21,4 @@
 #	SENSORS		#
 #			#
 	# Temp sensor
-		Temp sensor sends temperature data through SPI with 12-14bit frames
+		Temp sensor sends temperature data through SPI with 12bit frames
