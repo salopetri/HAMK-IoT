@@ -2,21 +2,36 @@
 *   THIS IS THE LIBRARY CONTAINING FUNCTIONS FOR SPI COMMUNICATIONS WITH THE SENSORS
 *
 */
-const unsigned int SPI_Temp_Delay = 10;
+const unsigned int _SPI_Temp_Delay = 10;
+int _MISO,_CLK,_tempCS,_micCS,_humidCS;
 
-uint16_t SPI_Temp_RAW(int MISO) {
+void SPI_init(int MISOpin, int CLKpin, int tempPin, int micPin, int humidPin) {
+    _MISO = MISOpin;
+    _CLK = CLKpin;
+    _tempCS = tempPin;
+    _micCS = micPin;
+    _humidCS = humidPin;
+
+    pinMode(_MISO, INPUT);
+    pinMode(_tempCS, OUTPUT);
+    pinMode(_micCS, OUTPUT);
+    pinMode(_humidCS, OUTPUT);
+    pinMode(_CLK, OUTPUT);
+}
+
+uint16_t SPI_Temp_RAW() {
     uint16_t data;
     uint16_t bit;
 
     for (int i=0; i<12;i++) {
-        digitalWrite(clock,HIGH);
-        delay(SPI_Temp_Delay);
+        digitalWrite(_CLK,HIGH);
+        delay(_SPI_Temp_Delay);
         data = data << 1;
-        bit = (digitalRead(MISO)) ? 1 : 0;
+        bit = (digitalRead(_MISO)) ? 1 : 0;
         data |= bit;
         Serial.write(bit);
-        digitalWrite(clock, LOW);
-        delay(SPI_Temp_Delay);
+        digitalWrite(_CLK, LOW);
+        delay(_SPI_Temp_Delay);
     }
 
     return data;
