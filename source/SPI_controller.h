@@ -12,7 +12,7 @@ uint16_t SPI_Temp_RAW(int MISO) {
         digitalWrite(clock,HIGH);
         delay(SPI_Temp_Delay);
         data = data << 1;
-        bit = digitalRead(MISO);
+        bit = (digitalRead(MISO)) ? 1 : 0;
         data |= bit;
         Serial.write(bit);
         digitalWrite(clock, LOW);
