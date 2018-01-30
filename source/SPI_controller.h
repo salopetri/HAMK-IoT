@@ -21,11 +21,10 @@ void SPI_init(int MISOpin, int CLKpin, int tempPin, int micPin, int humidPin) {
     digitalWrite(_tempCS, HIGH);
     delay(200); // Powerup time for T-sensor
 
-    Serial.begin(9600);
+    //Serial.begin(9600);
 }
 
 double SPI_Temp_RAW() {
-    Serial.print("Reading temperature... ");
     uint16_t data = 0;
     uint8_t decimals = 0;
     uint16_t bit;
@@ -81,9 +80,35 @@ double SPI_Temp_RAW() {
     Serial.print(".");
     Serial.print(decimals);
     Serial.print(" C\n");*/
-    Serial.print("DONE\n");
+
     // Constructs the floating point number presentation of temperature
     return sign*(double)data+((double)decimals/100);
 }
+
+uint16_t SPI_audio_RAW() {
+    uint16_t data = 0;
+    uint16_t bit;
+
+    digitalWrite(_micCS, LOW);
+    //delay(1); // Delay for tempsens
+
+    for (int i=0; i<16;i++) {
+        digitalWrite(_CLK,HIGH);
+        //delay(_SPI_Temp_Delay);
+        data = data << 1;
+        bit = (digitalRead(_MISO) == HIGH) ? 1 : 0;
+        data |= bit;
+        //Serial.print(bit);
+        digitalWrite(_CLK, LOW);
+        //delay(_SPI_Temp_Delay);
+    }
+
+    digitalWrite(_micCS, HIGH);
+    //Serial.println();
+    return data;
+}
+
+
+
 
 
