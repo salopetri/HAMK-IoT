@@ -2,7 +2,7 @@
 *   THIS IS THE LIBRARY CONTAINING FUNCTIONS FOR SPI COMMUNICATIONS WITH THE SENSORS
 *
 */
-const unsigned int _SPI_Temp_Delay = 1;
+const unsigned int _SPI_Temp_Delay = 10;
 int _MISO,_CLK,_tempCS,_micCS,_humidCS;
 
 void SPI_init(int MISOpin, int CLKpin, int tempPin, int micPin, int humidPin) {
@@ -21,7 +21,7 @@ void SPI_init(int MISOpin, int CLKpin, int tempPin, int micPin, int humidPin) {
     digitalWrite(_tempCS, HIGH);
     delay(200); // Powerup time for T-sensor
 
-    //Serial.begin(9600);
+    Serial.begin(9600);
 }
 
 double SPI_Temp_RAW() {
