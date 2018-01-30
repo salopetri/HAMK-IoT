@@ -4,13 +4,7 @@
 #include "WiFiCred.h"
 #include <MQTTClient.h>
 
-//char *client_id = "d:<your Organization ID>:<your Device Type>:<your Device ID>"
-char *client_id = "d:88u85d:MKR1000:D9C3";  // Your IBM Watson organisation, device type, device ID
-char *user_id = "use-token-auth";   // telling that authentication will be done with token
-char *authToken = "iUx3THvz6j&r0rPDNJ"; // Your IBM Watson Authentication Token for that particular device ID
 
-//char *ibm_hostname = “your-org-id.messaging.internetofthings.ibmcloud.com”;
-char *ibm_hostname = "88u85d.messaging.internetofthings.ibmcloud.com";
 
 MQTTClient MQTTc;
 
