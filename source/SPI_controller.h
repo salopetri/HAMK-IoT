@@ -3,7 +3,7 @@
 *
 */
 const unsigned int _SPI_Temp_Delay = 10;
-int _MISO,_CLK,_tempCS,_micCS,_humidCS;
+int _MISO,_CLK,_tempCS,_micCS,_humidCS, _MOSI;
 
 void SPI_init(int MISOpin, int CLKpin, int tempPin, int micPin, int humidPin) {
     _MISO = MISOpin;
@@ -11,14 +11,18 @@ void SPI_init(int MISOpin, int CLKpin, int tempPin, int micPin, int humidPin) {
     _tempCS = tempPin;
     _micCS = micPin;
     _humidCS = humidPin;
+    _MOSI = 8;
 
     pinMode(_MISO, INPUT);
     pinMode(_tempCS, OUTPUT);
     pinMode(_micCS, OUTPUT);
     pinMode(_humidCS, OUTPUT);
     pinMode(_CLK, OUTPUT);
+    pinMode(_MOSI, OUTPUT);
 
     digitalWrite(_tempCS, HIGH);
+    digitalWrite(_micCS, HIGH);
+    digitalWrite(_humidCS, HIGH);
     delay(200); // Powerup time for T-sensor
 
     Serial.begin(9600);
@@ -106,6 +110,36 @@ uint16_t SPI_audio_RAW() {
     digitalWrite(_micCS, HIGH);
     //Serial.println();
     return data;
+}
+
+void SPI_humid_RAW() {
+  int bit = 0;
+  int reg[8] = {0,1,0,0,1,1,0,0};
+
+  digitalWrite(_humidCS, LOW);
+
+  digitalWrite(_CLK, HIGH);
+  delay(1);
+
+  for (int i = 0; i<8; i++) {
+    int writebit = (reg[i]) ? HIGH : LOW;
+    digitalWrite(_MOSI, writebit);
+    digitalWrite(_CLK, LOW);
+    delay(1);
+    digitalWrite(_CLK, HIGH);
+    delay(1);
+  }
+  
+    for (int i=0; i<16;i++) {
+        digitalWrite(_CLK,HIGH);
+        delay(_SPI_Temp_Delay);
+        bit = (digitalRead(_MISO) == HIGH) ? 1 : 0;
+        Serial.print(bit);
+        digitalWrite(_CLK, LOW);
+        delay(_SPI_Temp_Delay);
+    }
+
+    digitalWrite(_humidCS, HIGH);
 }
 
 

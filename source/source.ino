@@ -1,12 +1,13 @@
-
-
 #include "SPI_controller.h"
 #include "WiFiCred.h"
+#include "Seeed_BME280.h"
 #include <MQTTClient.h>
+#include <Wire.h>
 
 
 
 MQTTClient MQTTc;
+BME280 bme280;
 
 char buff;
 
@@ -28,20 +29,27 @@ uint64_t lastWatsonMillis = 0;
 int runtime = 0;
 
 double temp = 0;
+double lastTemp = 0;
 uint16_t sLevel = 0;
 int sAVG = 0;
 int sHigh = 0;
 int sLow = 0;
+int sDiff = 0;
 int debug_counter = 0;
 bool lightState = false;
 int samples = 0;
 uint64_t totalSample = 0;
+
+float bmeTemp, bmePress, bmeHumid;
 
 void setup() {
   // Initialize custom SPI
   SPI_init(MISOpin, CLK, tempCS, micCS, humidCS);
   //SPI.begin();
 //  initMic();
+  if(!bme280.init()){
+    Serial.println("Device error!");
+  }
   delay(2000);
   pinMode(relayPin, OUTPUT);
   pinMode(led, OUTPUT);
@@ -81,10 +89,14 @@ void loop() {
     Serial.println();
     totalSample = 0;
     samples = 0;
+    sHigh = sAVG;
+    sLow = sAVG;
+    getBME();
   }
   
   // Everything goes inside this if-statement
   if (millis() - lastTempMillis >= 2000) {
+    lastTemp = temp;
     //Serial.println("Second started...");
     lastTempMillis = millis();
     Serial.print("Reading temperature... ");
@@ -92,25 +104,36 @@ void loop() {
     Serial.print("DONE (");
     Serial.print(temp);
     Serial.print(")\n");
+    //if (temp-lastTemp > 10 || temp-lastTemp < -10) temp = lastTemp;
+    //SPI_humid_RAW();
   }
 
     //Serial.print("Gettin samples... ");
-    if (micros()-micLastMillis >= 100) {
+    if (micros()-micLastMillis >= 10) {
       sLevel = SPI_audio_RAW();
       micLastMillis = micros();
       samples++;
       totalSample += sLevel;
+      if (sLevel > sHigh) sHigh = sLevel;
+      if (sLevel < sLow) sLow = sLevel;
+      sDiff = sHigh - sLow;
     }
 
     if (millis() - lastWatsonMillis >= 1000) {
       Serial.println("Publishing to Watson...");
     if(!MQTTc.connected()) {    // Cut for testing without Watson
     connect();                 // Cut for testing without Watson
-    }                           // Cut for testing without Watson
+    }                          // Cut for testing without Watson
     lastWatsonMillis = millis();
     //Cut for testing without Watson
     // for the node Red analysis it is better to have the json topics written without special marks without spaces..
-    MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"Sensor values\":\"Temperature\",\"temp\":\"" + String(temp)+"\"}");  
+
+    //MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"Sensor values\":\"Temperature\",\"temp\":\"" + String(temp)+"\",\"mic\":\""+String(sAVG)+"\",\"micdiff\":\""+String(sDiff)+"\"}");
+    //MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"Sensor values\":\"Temperature\",\"temp\":\"" + String(temp)+"\",\"mic\":\""+String(sAVG)+"\",\"micdiff\":\""+String(sDiff)+"\",\"pressure\":\"" + String(bmePress) + "\"}"); 
+    MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"humidity\":\"" + String(bmeHumid) + "\",\"temp\":\"" + String(temp)+"\",\"mic\":\""+String(sAVG)+"\",\"micdiff\":\""+String(sDiff)+"\",\"pressure\":\"" + String(bmePress) + "\"}"); 
+    
+     //MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"Sensor values\":\"Temperature\",\"temp\":\"" + String(temp)+"\",\"mic\":\""+String(sAVG)+"\",\"micdiff\":\""+String(sDiff)+"\",\"pressure\":\"" + String(bmePress) + "\",\"kosteus\":\"" + String(bmeHumid) + "\"}");
+    
     Serial.println("Succeeded publishing");
     }
 
@@ -176,10 +199,18 @@ void connect()
   
   Serial.print("\nconnecting Watson with MQTT....");
   // Cut for testing without Watson
-  while (!MQTTc.connect(client_id,user_id,authToken)) 
+  /*while (!MQTTc.connect(client_id,user_id,authToken)) 
   {
     Serial.print(".");
     delay(3000);
-  }
+  }*/
+  MQTTc.connect(client_id,user_id,authToken);
   Serial.println("\nconnected!");
 } // end of connect()
+
+void getBME() {
+  bmeTemp = bme280.getTemperature();
+  bmePress = bme280.getPressure();
+  bmeHumid = bme280.getHumidity();
+}
+
