@@ -1,9 +1,11 @@
 # 	   HAMK University of Applied Sciences IoT		#
 #      Smart Systems module at HAMK	#
-	This is a IoT prototype developed as a group assignment in HAMK UAS as part of the 'Smart Systems'-module (15 ECTS). 'Smart Systems' -module is a part of the ICT-engineering program.
+	This is a IoT prototype developed as a group assignment in HAMK UAS as part of the 'Smart Systems'-module (15 ECTS).
+	'Smart Systems' -module is a part of the second year studies in the ICT-engineering program.
 
 # Modular part for smart home system #
-	This prototype is intended to be a modular part for a smart home system and should provide automated lighting control and provide sensor data of the room, including temperature, humidity, air pressure and sound levels.
+	This prototype is intended to be a modular part for a smart home system and should provide automated lighting control
+	and provide sensor data of the room, including temperature, humidity, air pressure and sound levels.
 
 #			#
 #	PARTS		#
