@@ -17,8 +17,8 @@ const int micCS = 4; // Pin number for mics chip select
 const int humidCS = 3; // Pin number for humidity sensors chip select
 const int CLK = 9; // Pin number for clock 
 
-const int relayPin = 2;
-const int led = 6;
+const int relayPin = 2; // Pin number for ULN controlling the relay switch for the lamp
+const int led = 6; // Internal LED of MKR1000
 
 uint64_t lastMillis = 0;
 uint64_t lastTempMillis = 0;
@@ -26,30 +26,30 @@ uint64_t WiFilastMillis = 0;
 uint64_t currentMillis = 0;
 uint64_t micLastMillis = 0;
 uint64_t lastWatsonMillis = 0;
-int runtime = 0;
+int runtime = 0; // Runtime of the program in seconds
 
 double temp = 0;
 double lastTemp = 0;
-uint16_t sLevel = 0;
-int sAVG = 0;
-int sHigh = 0;
-int sLow = 0;
-int sDiff = 0;
-int debug_counter = 0;
-bool lightState = false;
-int samples = 0;
-uint64_t totalSample = 0;
+uint16_t sLevel = 0; // Raw input from the microphone
+int sAVG = 0; // Calculated average mic level in second
+int sHigh = 0; // Highest input from microphone
+int sLow = 0; // Lowest input from microphone
+int sDiff = 0; // Difference between lowest and highest
+bool lightState = false; // State of the lamp controlled by the relay
+int samples = 0; // How many samples from the mic in second
+uint64_t totalSample = 0; // Used for calculating the average mic input level
 
-float bmeTemp, bmePress, bmeHumid;
+float bmeTemp, bmePress, bmeHumid; // Floating point variables for the input from BME280
 
 void setup() {
   // Initialize custom SPI
-  SPI_init(MISOpin, CLK, tempCS, micCS, humidCS);
-  //SPI.begin();
-//  initMic();
+  SPI_init(MISOpin, CLK, tempCS, micCS);
+
+  // Initialize BME280
   if(!bme280.init()){
     Serial.println("Device error!");
   }
+  
   delay(2000);
   pinMode(relayPin, OUTPUT);
   pinMode(led, OUTPUT);
