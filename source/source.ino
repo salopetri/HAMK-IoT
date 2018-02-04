@@ -1,9 +1,8 @@
-#include "SPI_controller.h"
-#include "WiFiCred.h"
-#include "Seeed_BME280.h"
-#include <MQTTClient.h>
-#include <Wire.h>
-
+#include "SPI_controller.h" // Custom made library handling SPI connection with sensors
+#include "WiFiCred.h" // This header includes needed credentials for WiFi, Watson and HTTP connection
+#include "Seeed_BME280.h" // Library handling BME280 sensor
+#include <MQTTClient.h> // Library for MQTT connection with IBM Watson
+#include <Wire.h> // Library for the IC2 connection with BME280
 
 
 MQTTClient MQTTc;
@@ -42,6 +41,9 @@ uint64_t totalSample = 0; // Used for calculating the average mic input level
 float bmeTemp, bmePress, bmeHumid; // Floating point variables for the input from BME280
 
 void setup() {
+  // Initialize serial for debugging messages
+  Serial.begin(9600);
+  
   // Initialize custom SPI
   SPI_init(MISOpin, CLK, tempCS, micCS);
 
@@ -54,61 +56,52 @@ void setup() {
   pinMode(relayPin, OUTPUT);
   pinMode(led, OUTPUT);
 
-  Serial.print("Waiting for WiFi to connect");
+  Serial.print("Connecting to WiFi");
   while ( status != WL_CONNECTED) {
     status = WiFi.begin(ssid, pass);
     Serial.print(".");
     delay(1000);
   }
+  
+  // HTTP connection for light controlling server
   //client.connect(server, 80);
 
-  /*
-    client.begin("<Address Watson IOT>", 1883, net);
-    Address Watson IOT: <WatsonIOTOrganizationID>.messaging.internetofthings.ibmcloud.com
-    Example:
-    client.begin("iqwckl.messaging.internetofthings.ibmcloud.com", 1883, net);
-  */
-  MQTTc.begin(ibm_hostname, 1883, client);  // Cut for testing without Watson
-
-  connect();
+  // Begin MQTT connection with IBM Watson
+  MQTTc.begin(ibm_hostname, 1883, client);
+  watsonConnect();
 }
 
 void loop() {
-
-  if (millis() - lastMillis >=1000) {
-    Serial.println();
-    lastMillis = millis();
-    runtime++;
-    Serial.print("Runtime: ");
-    Serial.print(runtime);
-    Serial.print("s, Mic Samples: ");
-    Serial.println(samples);
-    Serial.print("Sample AVG: ");
-    sAVG = totalSample/samples;
-    Serial.print(sAVG);
-    Serial.println();
-    totalSample = 0;
-    samples = 0;
-    sHigh = sAVG;
-    sLow = sAVG;
-    getBME();
-  }
+    if (millis() - lastMillis >=1000) {
+      Serial.println();
+      lastMillis = millis();
+      runtime++;
+      Serial.print("Runtime: ");
+      Serial.print(runtime);
+      Serial.print("s, Mic Samples: ");
+      Serial.println(samples);
+      Serial.print("Sample AVG: ");
+      sAVG = totalSample/samples;
+      Serial.print(sAVG);
+      Serial.println();
+      totalSample = 0;
+      samples = 0;
+      sHigh = sAVG;
+      sLow = sAVG;
+      getBME();
+    }
   
-  // Everything goes inside this if-statement
-  if (millis() - lastTempMillis >= 2000) {
-    lastTemp = temp;
-    //Serial.println("Second started...");
-    lastTempMillis = millis();
-    Serial.print("Reading temperature... ");
-    temp = SPI_Temp_RAW(); // Get temperature data
-    Serial.print("DONE (");
-    Serial.print(temp);
-    Serial.print(")\n");
-    //if (temp-lastTemp > 10 || temp-lastTemp < -10) temp = lastTemp;
-    //SPI_humid_RAW();
-  }
+    if (millis() - lastTempMillis >= 2000) {
+      lastTemp = temp;
+      lastTempMillis = millis();
+      Serial.print("Reading temperature... ");
+      temp = SPI_Temp(); // Get temperature data
+      Serial.print("DONE (");
+      Serial.print(temp);
+      Serial.print(")\n");
+      //if (temp-lastTemp > 10 || temp-lastTemp < -10) temp = lastTemp;
+    }
 
-    //Serial.print("Gettin samples... ");
     if (micros()-micLastMillis >= 10) {
       sLevel = SPI_audio_RAW();
       micLastMillis = micros();
@@ -121,20 +114,12 @@ void loop() {
 
     if (millis() - lastWatsonMillis >= 1000) {
       Serial.println("Publishing to Watson...");
-    if(!MQTTc.connected()) {    // Cut for testing without Watson
-    connect();                 // Cut for testing without Watson
-    }                          // Cut for testing without Watson
-    lastWatsonMillis = millis();
-    //Cut for testing without Watson
-    // for the node Red analysis it is better to have the json topics written without special marks without spaces..
-
-    //MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"Sensor values\":\"Temperature\",\"temp\":\"" + String(temp)+"\",\"mic\":\""+String(sAVG)+"\",\"micdiff\":\""+String(sDiff)+"\"}");
-    //MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"Sensor values\":\"Temperature\",\"temp\":\"" + String(temp)+"\",\"mic\":\""+String(sAVG)+"\",\"micdiff\":\""+String(sDiff)+"\",\"pressure\":\"" + String(bmePress) + "\"}"); 
-    MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"humidity\":\"" + String(bmeHumid) + "\",\"temp\":\"" + String(temp)+"\",\"mic\":\""+String(sAVG)+"\",\"micdiff\":\""+String(sDiff)+"\",\"pressure\":\"" + String(bmePress) + "\"}"); 
-    
-     //MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"Sensor values\":\"Temperature\",\"temp\":\"" + String(temp)+"\",\"mic\":\""+String(sAVG)+"\",\"micdiff\":\""+String(sDiff)+"\",\"pressure\":\"" + String(bmePress) + "\",\"kosteus\":\"" + String(bmeHumid) + "\"}");
-    
-    Serial.println("Succeeded publishing");
+      if(!MQTTc.connected()) {    // Cut for testing without Watson
+        watsonConnect();                 // Cut for testing without Watson
+      }                          // Cut for testing without Watson
+      lastWatsonMillis = millis();
+      MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"humidity\":\"" + String(bmeHumid) + "\",\"temp\":\"" + String(temp)+"\",\"mic\":\""+String(sAVG)+"\",\"micdiff\":\""+String(sDiff)+"\",\"pressure\":\"" + String(bmePress) + "\"}"); 
+      Serial.println("Succeeded publishing");
     }
 
   /*
@@ -185,7 +170,7 @@ void loop() {
   }*/
 }
 
-void connect() 
+void watsonConnect() 
 {
   Serial.print("checking WLAN...");
   while (WiFi.status() != WL_CONNECTED) 
@@ -206,8 +191,11 @@ void connect()
   }*/
   MQTTc.connect(client_id,user_id,authToken);
   Serial.println("\nconnected!");
-} // end of connect()
+}
 
+/*  Function getting the values from BME280 using IC2 interface
+ * 
+ */
 void getBME() {
   bmeTemp = bme280.getTemperature();
   bmePress = bme280.getPressure();

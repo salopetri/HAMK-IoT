@@ -1,10 +1,11 @@
 /*
 *   THIS IS THE LIBRARY CONTAINING FUNCTIONS FOR SPI COMMUNICATIONS WITH THE SENSORS
-*
+*   WRITTEN BY PETRI SALO
 */
 const unsigned int _SPI_Temp_Delay = 10; // 10 milliseconds, this could be lowered significantly
 int _MISO,_CLK,_tempCS,_micCS;
 
+// Run this function to initialize the interface
 void SPI_init(int MISOpin, int CLKpin, int tempPin, int micPin) {
     _MISO = MISOpin;
     _CLK = CLKpin;
@@ -19,12 +20,12 @@ void SPI_init(int MISOpin, int CLKpin, int tempPin, int micPin) {
     digitalWrite(_tempCS, HIGH);
     digitalWrite(_micCS, HIGH);
     delay(200); // Powerup time for T-sensor
-
-    Serial.begin(9600);
 }
 
-// Function reading the input from temperature sensor
-double SPI_Temp_RAW() {
+/* Function reading the input from temperature sensor
+* Returns the temperature as Double
+*/
+double SPI_Temp() {
     uint16_t data = 0;
     uint8_t decimals = 0;
     uint16_t bit;
@@ -82,7 +83,9 @@ double SPI_Temp_RAW() {
     return sign*(double)data+((double)decimals/100);
 }
 
-// function reading the input from the microphone
+/* function reading the input from the microphone
+* Returns the raw data as 16-bit unsigned int
+*/
 uint16_t SPI_audio_RAW() {
     uint16_t data = 0;
     uint16_t bit;
