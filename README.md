@@ -4,7 +4,7 @@
 	'Smart Systems' -module is a part of the second year studies in the ICT-engineering program.
 
 # Modular part for smart home system #
-	This prototype is intended to be a modular part for a smart home system and should provide automated lighting control
+	This prototype is intended to be modular part for a smart home system and should provide automated lighting control
 	and provide sensor data of the room, including temperature, humidity, air pressure and sound levels.
 
 #			#
