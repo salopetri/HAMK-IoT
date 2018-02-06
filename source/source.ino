@@ -13,7 +13,6 @@ char buff;
 const int MISOpin = 10; // Pin number for MISO
 const int tempCS = 5; // Pin number for temp. sensors chip select
 const int micCS = 4; // Pin number for mics chip select
-const int humidCS = 3; // Pin number for humidity sensors chip select
 const int CLK = 9; // Pin number for clock 
 
 const int relayPin = 2; // Pin number for ULN controlling the relay switch for the lamp
@@ -25,9 +24,11 @@ uint64_t WiFilastMillis = 0;
 uint64_t currentMillis = 0;
 uint64_t micLastMillis = 0;
 uint64_t lastWatsonMillis = 0;
+uint64_t lastLCMillis = 0;
 int runtime = 0; // Runtime of the program in seconds
 
 double temp = 0;
+double tempAVG = 0;
 double lastTemp = 0;
 uint16_t sLevel = 0; // Raw input from the microphone
 int sAVG = 0; // Calculated average mic level in second
@@ -39,6 +40,9 @@ int samples = 0; // How many samples from the mic in second
 uint64_t totalSample = 0; // Used for calculating the average mic input level
 
 float bmeTemp, bmePress, bmeHumid; // Floating point variables for the input from BME280
+
+int LC_micTotal = 0;
+int LC_micAVG = 0;
 
 void setup() {
   // Initialize serial for debugging messages
@@ -80,15 +84,24 @@ void loop() {
       Serial.print(runtime);
       Serial.print("s, Mic Samples: ");
       Serial.println(samples);
-      Serial.print("Sample AVG: ");
+
+      Serial.print("LCmicAVG: ");
       sAVG = totalSample/samples;
-      Serial.print(sAVG);
+      Serial.print(LC_micAVG);
       Serial.println();
       totalSample = 0;
       samples = 0;
       sHigh = sAVG;
       sLow = sAVG;
       getBME();
+      LC_micTotal += sDiff;
+      /*if (runtime%2) lightState = true;
+      else lightState = false;
+      digitalWrite(relayPin, lightState);
+      digitalWrite(led, lightState);*/
+      Serial.print("LighState: ");
+      Serial.println(lightState);
+      
     }
   
     if (millis() - lastTempMillis >= 2000) {
@@ -102,7 +115,7 @@ void loop() {
       //if (temp-lastTemp > 10 || temp-lastTemp < -10) temp = lastTemp;
     }
 
-    if (micros()-micLastMillis >= 10) {
+    if (micros()-micLastMillis >= 100) {
       sLevel = SPI_audio_RAW();
       micLastMillis = micros();
       samples++;
@@ -113,61 +126,35 @@ void loop() {
     }
 
     if (millis() - lastWatsonMillis >= 1000) {
+      lastTemp = tempAVG;
+      tempAVG = (bmeTemp+temp)/2;
+      if (bmeTemp-temp > 10 || temp-bmeTemp > 10 && lastWatsonMillis != 0) {
+        temp = bmeTemp;
+      }
+      
       Serial.println("Publishing to Watson...");
       if(!MQTTc.connected()) {    // Cut for testing without Watson
         watsonConnect();                 // Cut for testing without Watson
       }                          // Cut for testing without Watson
       lastWatsonMillis = millis();
-      MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"humidity\":\"" + String(bmeHumid) + "\",\"temp\":\"" + String(temp)+"\",\"mic\":\""+String(sAVG)+"\",\"micdiff\":\""+String(sDiff)+"\",\"pressure\":\"" + String(bmePress) + "\"}"); 
-      Serial.println("Succeeded publishing");
+      MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"humidity\":\"" + String(bmeHumid) + "\",\"temp\":\"" + String(temp)+"\",\"lamp\":\""+String(lightState)+"\",\"micdiff\":\""+String(sDiff)+"\",\"pressure\":\"" + String(bmePress) + "\"}"); 
+      //Serial.println("Succeeded publishing");
     }
 
-  /*
-  if (millis() - WiFilastMillis > 5000) {
-    WiFilastMillis = millis();
-    digitalWrite(led, HIGH);
-    // if the server's disconnected, stop the client:
-    if (!client.connected()) {
-      if (status != WL_CONNECTED) {
-        Serial.print("*** WIFI RECONNECTING ***");
-        while ( status != WL_CONNECTED) {
-          status = WiFi.begin(ssid, pass);
-          Serial.print(".");
-          // wait 10 seconds for connection:
-          delay(1000);
-        }
+    if (millis()-lastLCMillis >= 10000) {
+      Serial.println("*** LCMILLIS ***");
+      LC_micAVG = LC_micTotal/10;
+      LC_micTotal = 0;
+      if (LC_micAVG > 100) {
+        digitalWrite(relayPin, HIGH);
+        lightState = true;
       }
-      Serial.println("*** SERVER RECONNECTING ***");
-      client.connect(server, 80);
+      else {
+        digitalWrite(relayPin, LOW);
+        lightState = false;
+      }
+      lastLCMillis = millis();
     }
-    if (client.connected()) getURL();
-
-    Serial.print("Reading response from server... ");
-    while (client.available()) {
-      buff = client.read();
-      //Serial.print(buff);
-      debug_counter++;
-      if (debug_counter > 2000) break;
-    }
-    Serial.println("DONE");
-    
-    if (buff == 'd') {
-      digitalWrite(relayPin, HIGH);
-      Serial.println("Light ON");
-      lightState= true;
-    }
-    else if (buff == 'e') {
-      digitalWrite(relayPin, LOW);
-      Serial.println("Light OFF");
-      lightState = false;
-    }
-    else {
-      digitalWrite(relayPin, lightState);
-      Serial.println("SERVER ERROR");
-    }
-    debug_counter = 0;
-    digitalWrite(led, LOW);
-  }*/
 }
 
 void watsonConnect() 
