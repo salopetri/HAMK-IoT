@@ -1,14 +1,27 @@
-#include "SPI_controller.h" // Custom made library handling SPI connection with sensors
-#include "WiFiCred.h" // This header includes needed credentials for WiFi, Watson and HTTP connection
-#include "Seeed_BME280.h" // Library handling BME280 sensor
+#include "SPI_controller.h" // Custom library controlling software SPI
+#include "Seeed_BME280.h" // Library handling BME280 sensor https://github.com/Seeed-Studio/Grove_BME280.git
 #include <MQTTClient.h> // Library for MQTT connection with IBM Watson
 #include <Wire.h> // Library for the IC2 connection with BME280
+#include <WiFi101.h> // Library for WiFi connection
+#include <WiFiClient.h> // Library for WiFi connection
+#include "Secrets.h" // This header includes needed credentials for WiFi, Watson and HTTP connection
+/*
+ *  It should contain the following:
+ *  char ssid[] = "XXXXXXXX";
+ *  char pass[] = "XXXXXXXXX";
+ *  char *client_id = "d:XXXXXX:XXXXXX:XXXX";  // Your IBM Watson organisation, device type, device ID
+ *  char *user_id = "use-token-auth";   // telling that authentication will be done with token
+ *  char *authToken = "XXXXXXXXXXXXX"; // Your IBM Watson Authentication Token for that particular device ID
+ *  char *ibm_hostname = “your-org-id.messaging.internetofthings.ibmcloud.com”;
+ */
 
 
 MQTTClient MQTTc;
 BME280 bme280;
+WiFiClient client;
 
-char buff;
+bool val = true;
+int status = WL_IDLE_STATUS;
 
 const int MISOpin = 10; // Pin number for MISO
 const int tempCS = 5; // Pin number for temp. sensors chip select
@@ -22,7 +35,7 @@ uint64_t lastMillis = 0;
 uint64_t lastTempMillis = 0;
 uint64_t WiFilastMillis = 0;
 uint64_t currentMillis = 0;
-uint64_t micLastMillis = 0;
+uint64_t micLastMicros = 0;
 uint64_t lastWatsonMillis = 0;
 uint64_t lastLCMillis = 0;
 int runtime = 0; // Runtime of the program in seconds
@@ -41,6 +54,7 @@ uint64_t totalSample = 0; // Used for calculating the average mic input level
 
 float bmeTemp, bmePress, bmeHumid; // Floating point variables for the input from BME280
 
+// Used to count variation in mic input during 10 seconds cycle
 int LC_micTotal = 0;
 int LC_micAVG = 0;
 
@@ -66,9 +80,6 @@ void setup() {
     Serial.print(".");
     delay(1000);
   }
-  
-  // HTTP connection for light controlling server
-  //client.connect(server, 80);
 
   // Begin MQTT connection with IBM Watson
   MQTTc.begin(ibm_hostname, 1883, client);
@@ -84,7 +95,6 @@ void loop() {
       Serial.print(runtime);
       Serial.print("s, Mic Samples: ");
       Serial.println(samples);
-
       Serial.print("LCmicAVG: ");
       sAVG = totalSample/samples;
       Serial.print(LC_micAVG);
@@ -95,29 +105,24 @@ void loop() {
       sLow = sAVG;
       getBME();
       LC_micTotal += sDiff;
-      /*if (runtime%2) lightState = true;
-      else lightState = false;
-      digitalWrite(relayPin, lightState);
-      digitalWrite(led, lightState);*/
       Serial.print("LighState: ");
       Serial.println(lightState);
       
     }
   
-    if (millis() - lastTempMillis >= 2000) {
+    if (millis() - lastTempMillis >= 1000) {
       lastTemp = temp;
       lastTempMillis = millis();
       Serial.print("Reading temperature... ");
-      temp = SPI_Temp(); // Get temperature data
+      temp = SPI_Temp(); // Get temperature data from PmodTC1
       Serial.print("DONE (");
       Serial.print(temp);
       Serial.print(")\n");
-      //if (temp-lastTemp > 10 || temp-lastTemp < -10) temp = lastTemp;
     }
 
-    if (micros()-micLastMillis >= 100) {
+    if (micros()-micLastMicros >= 100) {
       sLevel = SPI_audio_RAW();
-      micLastMillis = micros();
+      micLastMicros = micros();
       samples++;
       totalSample += sLevel;
       if (sLevel > sHigh) sHigh = sLevel;
@@ -128,7 +133,7 @@ void loop() {
     if (millis() - lastWatsonMillis >= 1000) {
       lastTemp = tempAVG;
       tempAVG = (bmeTemp+temp)/2;
-      if (bmeTemp-temp > 10 || temp-bmeTemp > 10 && lastWatsonMillis != 0) {
+      if (bmeTemp-temp > 10 || temp-bmeTemp > 10 && lastWatsonMillis != 0) { // If difference between temperature sensors is over 10 degrees we use the BME280 temperature
         temp = bmeTemp;
       }
       
@@ -138,14 +143,13 @@ void loop() {
       }                          // Cut for testing without Watson
       lastWatsonMillis = millis();
       MQTTc.publish("iot-2/evt/Sensor/fmt/json", "{\"humidity\":\"" + String(bmeHumid) + "\",\"temp\":\"" + String(temp)+"\",\"lamp\":\""+String(lightState)+"\",\"micdiff\":\""+String(sDiff)+"\",\"pressure\":\"" + String(bmePress) + "\"}"); 
-      //Serial.println("Succeeded publishing");
     }
 
+    // Check the soundlevels and control the relay every 10 seconds
     if (millis()-lastLCMillis >= 10000) {
-      Serial.println("*** LCMILLIS ***");
       LC_micAVG = LC_micTotal/10;
       LC_micTotal = 0;
-      if (LC_micAVG > 100) {
+      if (LC_micAVG > 100) { // The variation in microphone input seems to be always over 100 when there are people working in the room
         digitalWrite(relayPin, HIGH);
         lightState = true;
       }
@@ -180,7 +184,7 @@ void watsonConnect()
   Serial.println("\nconnected!");
 }
 
-/*  Function getting the values from BME280 using IC2 interface
+/*  Function getting the values from BME280 using I^2C interface
  * 
  */
 void getBME() {

@@ -1,8 +1,9 @@
 /*
 *   THIS IS THE LIBRARY CONTAINING FUNCTIONS FOR SPI COMMUNICATIONS WITH THE SENSORS
-*   WRITTEN BY PETRI SALO
+*   WE CONTROL THE SPI MANUALLY FROM SOFTWARE SIDE, THIS WAS DONE PURELY TO GET DEEPER UNDERSTANDING OF SPI INTERFACE
+*   IT WOULD BE ADVISED TO CHANGE THESE FUNCTIONS TO USE THE INTEGRATED SPI FUNCTIONALY IF DEVELOPED FURTHER
 */
-const unsigned int _SPI_Temp_Delay = 10; // 10 milliseconds, this could be lowered significantly
+const unsigned int _SPI_Temp_Delay = 1;
 int _MISO,_CLK,_tempCS,_micCS;
 
 // Run this function to initialize the interface
@@ -19,7 +20,7 @@ void SPI_init(int MISOpin, int CLKpin, int tempPin, int micPin) {
 
     digitalWrite(_tempCS, HIGH);
     digitalWrite(_micCS, HIGH);
-    delay(200); // Powerup time for T-sensor
+    delay(200); // Powerup time for PmodTC1
 }
 
 /* Function reading the input from temperature sensor
@@ -73,8 +74,9 @@ double SPI_Temp() {
     digitalWrite(_CLK, LOW);
     delay(_SPI_Temp_Delay);
 
-
+    // If the sign-bit was true we multiply the temperature values with -1 to make them negative
     data *= sign;
+    decimals *= sign;
 
     // Write chip select high to stop temperature sensor listening SPI traffic
     digitalWrite(_tempCS, HIGH);
