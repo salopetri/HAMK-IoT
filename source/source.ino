@@ -31,13 +31,13 @@ const int CLK = 9; // Pin number for clock
 const int relayPin = 2; // Pin number for ULN controlling the relay switch for the lamp
 const int led = 6; // Internal LED of MKR1000
 
-uint64_t lastMillis = 0;
-uint64_t lastTempMillis = 0;
-uint64_t WiFilastMillis = 0;
-uint64_t currentMillis = 0;
-uint64_t micLastMicros = 0;
-uint64_t lastWatsonMillis = 0;
-uint64_t lastLCMillis = 0;
+unsigned int lastMillis = 0;
+unsigned int lastTempMillis = 0;
+unsigned int WiFilastMillis = 0;
+unsigned int  currentMillis = 0;
+unsigned int micLastMicros = 0;
+unsigned int lastWatsonMillis = 0;
+unsigned int lastLCMillis = 0;
 int runtime = 0; // Runtime of the program in seconds
 
 double temp = 0;
